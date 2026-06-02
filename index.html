@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Genap Bahasa Lampung - SMPN 38 Bandar Lampung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 h-screen overflow-hidden flex flex-col">
+
+    <!-- Modal Peringatan -->
+    <div id="warningModal" class="fixed inset-0 bg-red-900 bg-opacity-90 z-50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full text-center mx-4">
+            <i class="fas fa-exclamation-triangle text-5xl text-red-600 mb-4"></i>
+            <h2 class="text-2xl font-bold text-red-600 mb-2">PERINGATAN!</h2>
+            <p id="warningText" class="text-gray-700 mb-4">Anda terdeteksi meninggalkan halaman ujian.</p>
+            <p class="font-bold mb-4 text-lg">Peringatan ke: <span id="warningCountDisplay">0</span> / 3</p>
+            <button onclick="closeWarning()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full w-full transition-colors">
+                SAYA MENGERTI
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Submit -->
+    <div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center mx-4">
+            <h2 class="text-xl font-bold mb-4">Kumpulkan Ujian?</h2>
+            <p id="unansweredWarning" class="text-red-600 text-sm font-semibold mb-4 hidden">
+                Peringatan: Masih ada <span id="unansweredCount">0</span> soal yang belum dikerjakan!
+            </p>
+            <p class="text-gray-700 mb-6">Apakah Anda yakin ingin menyelesaikan ujian ini?</p>
+            <div class="flex justify-center space-x-3">
+                <button onclick="closeConfirm()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors">
+                    Batal
+                </button>
+                <button onclick="processSubmit()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                    Ya, Kumpulkan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 1: Login Form -->
+    <div id="loginView" class="flex-1 flex items-center justify-center bg-blue-50 p-4 overflow-y-auto">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+            <div class="text-center mb-6">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Logo_Bandar_Lampung.png/170px-Logo_Bandar_Lampung.png" alt="Logo" class="h-20 mx-auto mb-3" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
+                <h1 class="text-2xl font-bold text-blue-800">SUMATIF AKHIR TAHUN</h1>
+                <h2 class="text-lg font-semibold text-gray-600">Semester Genap - Bahasa Lampung</h2>
+                <p class="text-sm text-gray-500">SMPN 38 Bandar Lampung</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                    <input type="text" id="studentName" class="w-full border-2 border-gray-300 rounded-lg p-2.5 focus:border-blue-500 focus:outline-none" placeholder="Masukkan nama Anda" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+                    <select id="studentClass" class="w-full border-2 border-gray-300 rounded-lg p-2.5 focus:border-blue-500 focus:outline-none">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option value="7 A">7 A</option>
+                        <option value="7 B">7 B</option>
+                        <option value="7 C">7 C</option>
+                        <option value="7 D">7 D</option>
+                        <option value="7 E">7 E</option>
+                        <option value="7 F">7 F</option>
+                    </select>
+                </div>
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 mt-4 rounded">
+                    <strong>Penting:</strong>
+                    <ul class="list-disc ml-5 mt-1">
+                        <li>Ujian memerlukan akses kamera untuk merekam aktivitas.</li>
+                        <li>Dilarang keluar aplikasi atau ganti tab (Maks 3 kali teguran, ujian otomatis selesai).</li>
+                        <li>Waktu pengerjaan 90 menit.</li>
+                    </ul>
+                </div>
+                <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg mt-4 transition-colors">
+                    Mulai Ujian
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: Exam Area -->
+    <div id="examView" class="hidden flex-col h-full bg-gray-100">
+        <!-- Header -->
+        <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
+            <div>
+                <h2 class="font-bold text-gray-800" id="headerName">Nama Siswa</h2>
+                <p class="text-xs text-gray-500" id="headerClass">Kelas</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="bg-blue-100 text-blue-800 font-bold px-4 py-2 rounded-full flex items-center shadow-inner">
+                    <i class="far fa-clock mr-2"></i>
+                    <span id="timerDisplay">90:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content (Question & Nav) -->
+        <main class="flex-1 flex overflow-hidden">
+            <!-- Question Area -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+                <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm p-6 mb-20 md:mb-0">
+                    <div class="flex justify-between items-center border-b pb-4 mb-4">
+                        <h3 class="text-xl font-bold text-blue-700">Soal No. <span id="qNumber">1</span></h3>
+                        <button onclick="toggleGrid()" class="md:hidden bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
+                            <i class="fas fa-th mr-1"></i> Daftar Soal
+                        </button>
+                    </div>
+                    
+                    <p id="qText" class="text-lg text-gray-800 mb-6 leading-relaxed min-h-[80px]"></p>
+                    
+                    <div id="optionsContainer" class="space-y-3">
+                        <!-- Options injected via JS -->
+                    </div>
+                </div>
+                
+                <!-- Floating Video Record -->
+                <div id="videoContainer" class="fixed top-20 md:top-24 right-4 md:right-8 bg-black rounded-lg shadow-lg overflow-hidden border-2 border-red-500 w-20 md:w-32 z-20 opacity-70 hover:opacity-100 transition-opacity">
+                    <div class="absolute top-1 left-1 flex items-center bg-black bg-opacity-50 px-1 rounded">
+                        <div class="w-2 h-2 rounded-full bg-red-600 animate-pulse mr-1"></div>
+                        <span class="text-[10px] text-white">REC</span>
+                    </div>
+                    <video id="videoElement" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                </div>
+            </div>
+
+            <!-- Sidebar (Daftar Soal) -->
+            <div id="questionGridSidebar" class="hidden md:flex flex-col w-64 bg-white shadow-l z-30 absolute right-0 top-0 h-full md:relative md:h-auto transform transition-transform duration-300">
+                <div class="p-4 bg-blue-600 text-white flex justify-between items-center">
+                    <h3 class="font-bold">Daftar Soal</h3>
+                    <button onclick="toggleGrid()" class="md:hidden"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-4 flex-1 overflow-y-auto hide-scroll">
+                    <div id="gridContainer" class="grid grid-cols-5 gap-2">
+                        <!-- Grid injected via JS -->
+                    </div>
+                </div>
+                <div class="p-4 border-t">
+                    <div class="flex items-center text-xs mb-1"><div class="w-3 h-3 bg-blue-500 rounded mr-2"></div> Sudah Dijawab</div>
+                    <div class="flex items-center text-xs"><div class="w-3 h-3 bg-white border border-gray-400 rounded mr-2"></div> Belum Dijawab</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <footer class="bg-white border-t p-4 flex justify-between items-center fixed md:relative bottom-0 w-full z-10">
+            <button id="btnPrev" onclick="navigate(-1)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg disabled:opacity-50 transition-colors">
+                <i class="fas fa-chevron-left mr-1"></i> Sebelumnya
+            </button>
+            <button id="btnNext" onclick="navigate(1)" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                Selanjutnya <i class="fas fa-chevron-right ml-1"></i>
+            </button>
+            <button id="btnSubmit" onclick="requestSubmit()" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                Selesai Ujian <i class="fas fa-check ml-1"></i>
+            </button>
+        </footer>
+    </div>
+
+    <!-- VIEW 3: Result View -->
+    <div id="resultView" class="hidden flex-col h-full bg-gray-50 overflow-y-auto">
+        <div class="bg-blue-600 text-white p-8 text-center shadow-md">
+            <h1 class="text-3xl font-bold mb-2">Ujian Selesai!</h1>
+            <p class="text-blue-100 mb-6">Terima kasih telah mengikuti Sumatif Akhir Tahun Genap.</p>
+            
+            <div class="bg-white text-gray-800 rounded-xl p-6 max-w-md mx-auto shadow-lg relative overflow-hidden">
+                <div class="text-sm text-gray-500 font-semibold mb-1" id="resName">Nama Siswa</div>
+                <div class="text-xs text-gray-400 mb-4" id="resClass">Kelas 7 X</div>
+                <div class="text-5xl font-black text-blue-600 mb-2" id="resScore">100</div>
+                <div class="text-sm font-semibold text-gray-600">Total Nilai</div>
+                
+                <div class="flex justify-between mt-6 border-t pt-4">
+                    <div class="text-center w-1/2 border-r">
+                        <div class="text-2xl font-bold text-green-500" id="resCorrect">50</div>
+                        <div class="text-xs text-gray-500">Benar</div>
+                    </div>
+                    <div class="text-center w-1/2">
+                        <div class="text-2xl font-bold text-red-500" id="resWrong">0</div>
+                        <div class="text-xs text-gray-500">Salah</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-4xl mx-auto w-full p-4 space-y-6 mt-6 mb-10">
+            <!-- Box Pelanggaran -->
+            <div class="bg-white rounded-lg shadow p-5 border-l-4 border-red-500">
+                <h3 class="font-bold text-lg text-red-600 mb-3"><i class="fas fa-exclamation-circle mr-2"></i>Catatan Pelanggaran</h3>
+                <div id="resWarnings" class="text-sm text-gray-700">
+                    Tidak ada pelanggaran yang dilakukan.
+                </div>
+            </div>
+            
+            <div class="bg-green-50 border border-green-200 text-green-800 p-4 rounded-lg text-sm flex items-start">
+                <i class="fas fa-info-circle mt-1 mr-3 text-lg"></i>
+                <p>Data ujian sedang diproses. Jika kamera Anda aktif selama ujian, rekaman video akan otomatis tersimpan ke perangkat Anda (Cek folder Download).</p>
+            </div>
+
+            <h3 class="font-bold text-xl text-gray-800 border-b pb-2">Review Jawaban</h3>
+            <div id="reviewContainer" class="space-y-4">
+                <!-- Review injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        // CONFIG
+        const TOTAL_QUESTIONS = 50;
+        const EXAM_DURATION = 90 * 60; // 90 menit dalam detik
+        const POINTS_PER_QUESTION = 2;
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxd2EEQGwNegYdNmEC_4UHsoVLcij5HlATnMHlpD615a067pyVm2K_xNSNRFhdF8NA5/exec'; 
+
+        // STATE
+        let student = { name: '', class: '' };
+        let currentQuestion = 0;
+        let answers = new Array(TOTAL_QUESTIONS).fill(null);
+        let warnings = 0;
+        let warningLogs = [];
+        let timeLeft = EXAM_DURATION;
+        let timerInterval;
+        let isExamActive = false;
+        let isAlertOpen = false;
+        let antiCheatReady = false; // Flag baru untuk menghindari deteksi palsu di awal
+        
+        // CAMERA STATE
+        let mediaRecorder;
+        let recordedChunks = [];
+        let isCameraActive = false;
+
+        // DATABASE SOAL (50 Soal Bahasa Lampung Kelas 7 Kurikulum Merdeka)
+        const questionsDB = [
+            { q: "Aksara Lampung disebut juga dengan istilah...", options: ["Kaganga", "Had Lampung", "Surat Ulu", "Hanacaraka"], answer: 1, explanation: "Aksara Lampung dikenal dengan sebutan Had Lampung." },
+            { q: "Jumlah induk huruf (kelabai surat) dalam aksara Lampung adalah...", options: ["18", "19", "20", "21"], answer: 2, explanation: "Induk huruf (kelabai surat) aksara Lampung berjumlah 20 huruf dasar." },
+            { q: "Tanda baca dalam aksara Lampung yang berfungsi memberi bunyi 'i' pada induk huruf disebut...", options: ["Bicek", "Ulan", "Tekelubang", "DataN"], answer: 1, explanation: "Anak huruf Ulan (di atas) memberikan bunyi vokal 'i' (Ulan i) atau 'e' (Ulan e)." },
+            { q: "Semboyan provinsi Lampung yang bermakna 'masyarakat yang saling bergotong royong' adalah...", options: ["Sang Bumi Ruwa Jurai", "Piil Pesenggiri", "Sai Bumi Ruwa Jurai", "Beguai Jejama"], answer: 2, explanation: "Sai Bumi Ruwa Jurai adalah semboyan yang bermakna Satu Bumi Dua Cabang (Dialek A dan O yang bersatu)." },
+            { q: "Falsafah hidup masyarakat Lampung yang berarti menjaga kehormatan atau harga diri adalah...", options: ["Nemui Nyimah", "Nengah Nyappur", "Sakai Sambayan", "Piil Pesenggiri"], answer: 3, explanation: "Piil Pesenggiri adalah prinsip dasar menjaga kehormatan dan harga diri orang Lampung." },
+            { q: "Kata ganti orang pertama tunggal (saya) dalam bahasa Lampung dialek O adalah...", options: ["Nyak", "Ikam", "Gham", "Niku"], answer: 1, explanation: "'Ikam' digunakan untuk 'saya' (halus/dialek O), sedangkan 'Nyak' (dialek A). 'Gham' (kita), 'Niku' (kamu)." },
+            { q: "Kata ganti orang kedua (kamu) dalam bahasa Lampung yang sopan/halus adalah...", options: ["Niku", "Puti", "Kutu", "Puskam"], answer: 3, explanation: "Puskam adalah kata ganti orang kedua (kamu/anda) yang sopan/halus." },
+            { q: "Dalam adat budaya Lampung, kegiatan bergotong royong tolong menolong disebut...", options: ["Sakai Sambayan", "Nengah Nyappur", "Nemui Nyimah", "Bejuluk Beadek"], answer: 0, explanation: "Sakai Sambayan bermakna tolong-menolong/bergotong royong dalam adat Lampung." },
+            { q: "Berapakah jumlah anak huruf (benah surat) aksara Lampung yang letaknya di bawah?", options: ["2", "3", "4", "5"], answer: 1, explanation: "Ada 3 anak huruf di bawah: Bitan (o/u), Tekelungun (au), dan Kelenniah (ah)." },
+            { q: "Sebutan untuk 'ayah/bapak' dalam kekerabatan masyarakat Lampung adalah...", options: ["Induk", "Kajong", "Bak / Apak", "Kiyay"], answer: 2, explanation: "Bak atau Apak adalah panggilan untuk ayah/bapak." },
+            { q: "'Selamat Pagi' dalam bahasa Lampung diucapkan...", options: ["Selamat debi", "Selamat bingi", "Selamat mahan", "Selamat tukuk / pangi"], answer: 3, explanation: "Tukuk/Pangi berarti pagi, sehingga selamat pagi adalah Selamat Tukuk/Pangi." },
+            { q: "Arti kata 'Mengan' dalam bahasa Indonesia adalah...", options: ["Minum", "Tidur", "Makan", "Mandi"], answer: 2, explanation: "Mengan (Dialek A) atau Menggan (Dialek O) berarti makan." },
+            { q: "Terjemahkan ke bahasa Lampung (Dialek A): 'Kita semua harus rajin belajar.'", options: ["Gham unyin kudu rajin belajar", "Ikam unyin kudu rajin belajar", "Tiyan unyin kudu rajin belajar", "Kuti unyin kudu rajin belajar"], answer: 0, explanation: "Gham (Kita), unyin (semua), kudu (harus)." },
+            { q: "Apa arti dari 'Nengah Nyappur' dalam falsafah Lampung?", options: ["Pemberian gelar adat", "Ramah tamah menyambut tamu", "Membuka diri dalam pergaulan bermasyarakat", "Pantang menyerah"], answer: 2, explanation: "Nengah Nyappur berarti pandai bergaul dan membuka diri di tengah masyarakat." },
+            { q: "Tari adat tradisional Lampung yang biasa digunakan untuk menyambut tamu agung adalah...", options: ["Tari Sigeh Penguten", "Tari Bedana", "Tari Melinting", "Tari Cangget"], answer: 0, explanation: "Tari Sigeh Penguten adalah tari kreasi penyambutan tamu resmi provinsi Lampung." },
+            { q: "Pakaian adat pengantin wanita Lampung selalu menggunakan mahkota yang disebut...", options: ["Siger", "Tapis", "Kopiah Emas", "Kain Pandan"], answer: 0, explanation: "Siger (Siger/Sigor) adalah mahkota kebesaran adat Lampung." },
+            { q: "Kain tenun tradisional khas Lampung yang ditenun menggunakan benang emas adalah...", options: ["Songket", "Tapis", "Batik", "Ulos"], answer: 1, explanation: "Kain Tapis adalah pakaian wanita suku Lampung berbentuk sarung yang ditenun dari benang kapas dan emas." },
+            { q: "Lambang mahkota Siger memiliki lekuk (ruji) berjumlah... (Siger Pepadun)", options: ["7", "9", "5", "11"], answer: 1, explanation: "Siger Pepadun memiliki 9 lekuk/ruji (melambangkan 9 marga), sedangkan Saibatin 7 ruji." },
+            { q: "Anak huruf aksara Lampung yang berfungsi menghilangkan huruf vokal (mematikan huruf) disebut...", options: ["Bicek", "Tekelubang", "Nengen / Nengan", "Rejunjung"], answer: 2, explanation: "Tanda Nengen/Nengan digunakan di akhir kata/suku kata untuk mematikan vokal dari kelabai surat." },
+            { q: "Angka 1 sampai 5 dalam bahasa Lampung adalah...", options: ["Sai, ghuwa, telu, pak, lima", "Sai, ghuwa, telu, empat, lima", "Satu, dua, telu, pak, lima", "Sai, ghua, tiga, pak, lima"], answer: 0, explanation: "Penghitungan dasar Lampung: Sai (1), Ghuwa (2), Telu (3), Pak (4), Lima (5)." },
+            { q: "Gelar adat dalam masyarakat Lampung (Pepadun) biasa disebut...", options: ["Pangkat", "Sutan / Suttan", "Muli", "Mekhanai"], answer: 1, explanation: "Sutan/Suttan adalah gelar adat tertinggi." },
+            { q: "Pemuda dan pemudi dalam bahasa Lampung disebut...", options: ["Sebatin dan Pepadun", "Muli dan Mekhanai", "Bak dan Induk", "Kiyay dan Atu"], answer: 1, explanation: "Muli berarti gadis/pemudi, dan Mekhanai berarti bujang/pemuda." },
+            { q: "Cerita rakyat dari daerah Lampung yang mengisahkan tentang persahabatan manusia dan buaya adalah...", options: ["Si Pahit Lidah", "Raden Intan", "Asal Mula Danau Ranau", "Buaya Perompak / Kisah Aminah"], answer: 3, explanation: "Kisah Aminah dan Buaya (atau legenda buaya di perairan Lampung) adalah cerita rakyat populer." },
+            { q: "Alat musik petik tradisional khas Lampung adalah...", options: ["Angklung", "Sasando", "Cetikan", "Gambus Lunik"], answer: 3, explanation: "Gambus Lunik (gambus kecil) adalah alat musik petik tradisional Lampung." },
+            { q: "Rumah adat Lampung dikenal dengan nama...", options: ["Rumah Gadang", "Nuwo Sesat", "Rumah Joglo", "Lamin"], answer: 1, explanation: "Nuwo Sesat (Sesat Agung) adalah balai pertemuan adat sekaligus lambang rumah adat Lampung." },
+            { q: "Bagian Nuwo Sesat tempat berkumpulnya para penyimbang adat disebut...", options: ["Pusiban", "Tetabuhan", "Ijan Geladak", "Ruang Tetamu"], answer: 0, explanation: "Pusiban adalah ruang khusus tempat para tetua/penyimbang adat bermusyawarah." },
+            { q: "Dalam penulisan aksara Lampung, huruf 'Ka' jika diberi anak huruf Bicek (e) bunyinya menjadi...", options: ["Ku", "Ki", "Ke (pepet)", "Ko"], answer: 2, explanation: "Bicek menghasilkan bunyi 'e' pepet, seperti pada kata 'Ke-las'." },
+            { q: "Kata 'Sikindua' dalam dialek O (Abung/Menggala) digunakan untuk...", options: ["Orang pertama (saya) halus", "Orang kedua (kamu)", "Orang ketiga (dia)", "Jamak (kita)"], answer: 0, explanation: "Sikindua adalah bentuk halus dari 'saya' dalam dialek O." },
+            { q: "Bahasa Lampung merupakan bagian dari rumpun bahasa...", options: ["Jawa-Sunda", "Melayu-Polinesia", "Papua", "Sino-Tibet"], answer: 1, explanation: "Bahasa Lampung tergolong dalam rumpun bahasa Austronesia (Melayu-Polinesia)." },
+            { q: "Pahlawan nasional dari Lampung yang gigih melawan penjajahan Belanda adalah...", options: ["Tuanku Imam Bonjol", "Pangeran Antasari", "Radin Inten II", "Sisingamangaraja XII"], answer: 2, explanation: "Radin Inten II adalah pahlawan nasional keturunan darah biru dari Lampung Selatan." },
+            { q: "Senjata tradisional khas suku Lampung disebut...", options: ["Keris", "Badik / Terapang", "Mandau", "Rencong"], answer: 1, explanation: "Terapang (Keris Lampung) dan Badik adalah senjata khas Lampung." },
+            { q: "Sapaan kehormatan untuk anak laki-laki tertua di lingkungan keluarga Lampung adalah...", options: ["Atu", "Ubai", "Kiyay", "Adi"], answer: 2, explanation: "Kiyay adalah panggilan untuk kakak laki-laki." },
+            { q: "Sapaan kehormatan untuk kakak perempuan tertua adalah...", options: ["Atu / Kelama", "Kiyay", "Kajong", "Induk"], answer: 0, explanation: "Atu atau Uwa/Kelama sering digunakan untuk memanggil kakak perempuan." },
+            { q: "Jika induk huruf 'Ga' diberi anak huruf Rejunjung dan Nengen/Nengan huruf 'R', maka dibaca...", options: ["Gagh", "Gar", "Gah", "Gai"], answer: 1, explanation: "Rejunjung menghasilkan bunyi 'r' atau nengen huruf 'ra' juga menghasilkan konsonan r mati." },
+            { q: "Kalimat 'Saya pergi ke sekolah' dalam dialek A adalah...", options: ["Nyak lapah mit sekula", "Ikam lapah mit sekula", "Gham lapah mit sekula", "Niku lapah mit sekula"], answer: 0, explanation: "Nyak (saya), lapah (pergi), mit (ke), sekula (sekolah)." },
+            { q: "Dalam upacara adat, makanan khas Lampung yang terbuat dari olahan ikan berkuah kuning/asam pedas adalah...", options: ["Rendang", "Gulai Taboh / Seruit", "Gudeg", "Pempek"], answer: 1, explanation: "Seruit (makan bersama) dengan lauk ikan berkuah/gulai taboh adalah makanan khas." },
+            { q: "Arti 'Nemui Nyimah' adalah...", options: ["Nama gelar", "Berkunjung dan bersilaturahmi dengan membawa buah tangan", "Meninggalkan kampung", "Tolong menolong"], answer: 1, explanation: "Nemui (bertamu), Nyimah (memberi), artinya bermurah hati dan bersilaturahmi." },
+            { q: "Anak huruf aksara Lampung yang letaknya di samping kanan induk huruf berjumlah...", options: ["2", "3", "4", "5"], answer: 1, explanation: "Di samping kanan: Tekelingai (ai), Keleniah (ah), dan Nengen/tanda mati." },
+            { q: "Sebutan 'Masyarakat Pepadun' identik dengan letak geografis wilayah...", options: ["Pesisir Pantai", "Pegunungan", "Pedalaman / Daratan Menengah", "Kepulauan"], answer: 2, explanation: "Pepadun umumnya mendiami daerah pedalaman (Abung, Tulang Bawang, Way Kanan)." },
+            { q: "Sebutan 'Masyarakat Saibatin' (Peminggir) identik mendiami wilayah...", options: ["Pesisir / Pantai", "Pedalaman", "Perbatasan Palembang", "Hutan Tropis"], answer: 0, explanation: "Saibatin (Satu Batin) mendiami wilayah pesisir timur, selatan, hingga barat Lampung." },
+            { q: "Istilah untuk paman (adik dari ayah/ibu) di Lampung sering disebut...", options: ["Puyang", "Kemaman / Kelama", "Kajong", "Datuk"], answer: 1, explanation: "Kemaman (adik laki-laki ayah) atau Kelama (saudara laki-laki ibu)." },
+            { q: "Huruf 'Nya' dalam aksara Lampung merupakan urutan ke...", options: ["13", "14", "15", "16"], answer: 3, explanation: "Urutan: Ka Ga Nga Pa Ba Ma Ta Da Na Ca Ja Nya..." },
+            { q: "Fungsi anak huruf 'Tekelubang' adalah memberikan bunyi...", options: ["U", "O", "Au", "Ang"], answer: 3, explanation: "Tekelubang (di atas) berbunyi konsonan 'ng' (ang)." },
+            { q: "Sastra lisan Lampung yang berisi nasihat atau petuah bersajak saat melepas pengantin disebut...", options: ["Wawacan", "Pisaan / Paradini", "Ringget", "Sagata / Pantun"], answer: 1, explanation: "Paradini / Pisaan sering dibacakan saat menyambut atau melepas pengantin." },
+            { q: "Lagu daerah Lampung yang populer tentang pariwisata pantainya adalah...", options: ["Bumi Lampung", "Cangget Agung", "Lipang Lipang Dang", "Teluk Lampung / Pantai Marina"], answer: 0, explanation: "Bumi Lampung atau Sang Bumi Ruwa Jurai sangat mendeskripsikan keindahan alamnya." },
+            { q: "Suku kata 'Lam' ditulis dengan...", options: ["Induk La + Rejunjung", "Induk La + Tekelubang", "Induk La + Induk Ma + Nengen", "Induk La + Ulan"], answer: 2, explanation: "Konsonan M mati ditulis menggunakan induk Ma diberi tanda Nengen (tanda mati)." },
+            { q: "Terjemahan 'Tikus itu lari' dalam bahasa Lampung adalah...", options: ["Kucing seno mela", "Tikus seno mela/Lari", "Mughai seno mela", "Kuyuk seno lari"], answer: 1, explanation: "Tikus (atau balang/tikus) seno (itu) lari/mela." },
+            { q: "Bahasa Lampung dipelihara dan diajarkan berdasarkan kurikulum sebagai muatan...", options: ["Nasional", "Lokal (Mulok)", "Internasional", "Ekstrakurikuler"], answer: 1, explanation: "Bahasa daerah diajarkan sebagai Muatan Lokal (Mulok)." },
+            { q: "Kata dasar 'Tulis' bila mendapat awalan 'Nge' menjadi 'Ngetulis' yang artinya...", options: ["Tulisan", "Menulis", "Ditulis", "Tertulis"], answer: 1, explanation: "AWalan nge-/ny- membentuk kata kerja aktif (Menulis)." },
+            { q: "Dalam penulisan kata 'KOTA', menggunakan induk huruf...", options: ["Ka dan Ta", "Ka dan Ta + Bitan", "Ka + Bitan o dan Ta", "Ka + Ulan dan Ta"], answer: 2, explanation: "Induk Ka diberi anak huruf Bitan o (ko), lalu induk Ta (ta)." }
+        ];
+
+        // INITIALIZATION
+        window.onload = () => {
+            renderOptions(currentQuestion);
+            renderGrid();
+        };
+
+        // START EXAM (LOGIN)
+        function startExam() {
+            const nameInput = document.getElementById('studentName').value.trim();
+            const classInput = document.getElementById('studentClass').value;
+            
+            if (!nameInput || !classInput) {
+                alert("Mohon isi Nama dan Kelas terlebih dahulu!");
+                return;
+            }
+
+            // Atur Informasi Identitas Siswa
+            student.name = nameInput;
+            student.class = classInput;
+            document.getElementById('headerName').textContent = nameInput;
+            document.getElementById('headerClass').textContent = classInput;
+            
+            // Pindahkan Tampilan langsung
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('examView').classList.remove('hidden');
+            document.getElementById('examView').classList.add('flex');
+            
+            // Aktifkan Fitur Timer & Anti-Curang
+            isExamActive = true;
+            startTimer();
+            setupAntiCheat();
+            
+            // Fullscreen secara halus
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+            } catch(e) {}
+            
+            updateQuestionView();
+
+            // Inisialisasi Kamera di latar belakang agar login tidak macet
+            initCamera();
+        }
+
+        // ASYNC CAMERA INITIALIZATION
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } }, 
+                    audio: false 
+                });
+                
+                const videoEl = document.getElementById('videoElement');
+                if (videoEl) {
+                    videoEl.srcObject = stream;
+                }
+                
+                // Siapkan recorder dengan toleransi codec tinggi
+                try {
+                    let options = { mimeType: 'video/webm;codecs=vp8' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' };
+                    }
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = {}; // Gunakan default sistem jika format tidak didukung
+                    }
+                    
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+                    mediaRecorder.start(10000); // Rekam chunks per 10 detik agar hemat RAM
+                    isCameraActive = true;
+                } catch(recErr) {
+                    console.warn("Gagal memulai modul perekam, hanya mengaktifkan pratinjau kamera saja:", recErr);
+                    isCameraActive = false;
+                }
+            } catch (err) {
+                console.warn("Kamera tidak diizinkan atau tidak ditemukan:", err);
+                isCameraActive = false;
+                const container = document.getElementById('videoContainer');
+                if (container) container.classList.add('hidden');
+                
+                warningLogs.push("Sistem: Siswa mengerjakan ujian tanpa rekaman kamera (Izin ditolak/kamera rusak)");
+            }
+        }
+
+        // TIMER LOGIC
+        function startTimer() {
+            const display = document.getElementById('timerDisplay');
+            timerInterval = setInterval(() => {
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    processSubmit(true); 
+                } else {
+                    timeLeft--;
+                    let minutes = Math.floor(timeLeft / 60);
+                    let seconds = timeLeft % 60;
+                    display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    if(timeLeft < 300) display.classList.add('text-red-600', 'animate-pulse'); 
+                }
+            }, 1000);
+        }
+
+        // ANTI-CHEAT LOGIC
+        function setupAntiCheat() {
+            antiCheatReady = false; // Reset status kesiapan di awal
+            document.addEventListener('visibilitychange', checkVisibility);
+            window.addEventListener('blur', checkBlur);
+            
+            // BERI MASA TENGGANG 5 DETIK
+            // Memberikan waktu bagi browser untuk membuka dialog kamera & merender layar penuh tanpa memicu "pelanggaran palsu"
+            setTimeout(() => {
+                antiCheatReady = true;
+            }, 5000);
+        }
+
+        function removeAntiCheat() {
+            document.removeEventListener('visibilitychange', checkVisibility);
+            window.removeEventListener('blur', checkBlur);
+            antiCheatReady = false;
+        }
+
+        function checkVisibility() {
+            if (!antiCheatReady) return; // Abaikan jika masih dalam masa tenggang
+            if (document.hidden && isExamActive && !isAlertOpen) {
+                triggerWarning("Berpindah tab atau menutup browser");
+            }
+        }
+
+        function checkBlur() {
+            if (!antiCheatReady) return; // Abaikan jika masih dalam masa tenggang
+            if (isExamActive && !isAlertOpen) {
+                setTimeout(() => {
+                    if (document.activeElement === document.body && !isAlertOpen && isExamActive) {
+                        triggerWarning("Layar kehilangan fokus / membuka aplikasi lain");
+                    }
+                }, 200);
+            }
+        }
+
+        function triggerWarning(reason) {
+            isAlertOpen = true;
+            warnings++;
+            const time = new Date().toLocaleTimeString('id-ID');
+            warningLogs.push(`Pelanggaran ${warnings}: ${reason} (Jam ${time})`);
+            
+            document.getElementById('warningCountDisplay').textContent = warnings;
+            document.getElementById('warningText').textContent = reason;
+            
+            const modal = document.getElementById('warningModal');
+            modal.classList.remove('hidden');
+
+            if (warnings >= 3) {
+                modal.querySelector('button').textContent = "Batas Terlampaui. Kumpul Otomatis.";
+                modal.querySelector('button').onclick = () => processSubmit(true);
+            }
+        }
+
+        function closeWarning() {
+            document.getElementById('warningModal').classList.add('hidden');
+            setTimeout(() => { isAlertOpen = false; }, 500); 
+        }
+
+        // QUESTION NAVIGATION & RENDERING
+        function updateQuestionView() {
+            const q = questionsDB[currentQuestion];
+            document.getElementById('qNumber').textContent = currentQuestion + 1;
+            document.getElementById('qText').textContent = q.q;
+            
+            renderOptions(currentQuestion);
+            updateNavButtons();
+            renderGrid();
+        }
+
+        // ... Sisa kode renderOptions, selectOption, navigate, updateNavButtons, dll sama ...
+        function renderOptions(idx) {
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            
+            questionsDB[idx].options.forEach((opt, optIdx) => {
+                const isSelected = answers[idx] === optIdx;
+                const div = document.createElement('div');
+                div.className = `p-4 border-2 rounded-lg cursor-pointer transition-colors flex items-center ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`;
+                div.onclick = () => selectOption(idx, optIdx);
+                
+                const letter = String.fromCharCode(65 + optIdx);
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3 ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}">${letter}</div>
+                    <div class="text-gray-800 font-medium">${opt}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function selectOption(qIdx, optIdx) {
+            answers[qIdx] = optIdx;
+            renderOptions(qIdx);
+            renderGrid(); 
+        }
+
+        function navigate(dir) {
+            currentQuestion += dir;
+            updateQuestionView();
+        }
+
+        function updateNavButtons() {
+            document.getElementById('btnPrev').disabled = currentQuestion === 0;
+            
+            const btnNext = document.getElementById('btnNext');
+            const btnSubmit = document.getElementById('btnSubmit');
+            
+            if (currentQuestion === TOTAL_QUESTIONS - 1) {
+                btnNext.classList.add('hidden');
+                btnSubmit.classList.remove('hidden');
+            } else {
+                btnNext.classList.remove('hidden');
+                btnSubmit.classList.add('hidden');
+            }
+        }
+
+        function toggleGrid() {
+            const grid = document.getElementById('questionGridSidebar');
+            grid.classList.toggle('hidden');
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+                const btn = document.createElement('button');
+                const isAnswered = answers[i] !== null;
+                const isCurrent = currentQuestion === i;
+                
+                btn.className = `w-10 h-10 flex items-center justify-center rounded font-semibold text-sm transition-colors border
+                    ${isCurrent ? 'ring-2 ring-yellow-400' : ''}
+                    ${isAnswered ? 'bg-blue-500 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}
+                `;
+                btn.textContent = i + 1;
+                btn.onclick = () => {
+                    currentQuestion = i;
+                    updateQuestionView();
+                    if(window.innerWidth < 768) toggleGrid(); 
+                };
+                container.appendChild(btn);
+            }
+        }
+
+        // SUBMIT LOGIC
+        function requestSubmit() {
+            const unanswered = answers.filter(a => a === null).length;
+            if (unanswered > 0) {
+                document.getElementById('unansweredWarning').classList.remove('hidden');
+                document.getElementById('unansweredCount').textContent = unanswered;
+            } else {
+                document.getElementById('unansweredWarning').classList.add('hidden');
+            }
+            isAlertOpen = true; 
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            setTimeout(() => { isAlertOpen = false; }, 500);
+        }
+
+        async function processSubmit(isForced = false) {
+            document.getElementById('confirmModal').classList.add('hidden');
+            document.getElementById('warningModal').classList.add('hidden');
+            
+            isExamActive = false;
+            clearInterval(timerInterval);
+            removeAntiCheat();
+
+            // Matikan Kamera & Unduh Berkas Rekaman (Jika aktif)
+            if (isCameraActive && mediaRecorder && mediaRecorder.state !== 'inactive') {
+                try {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                    
+                    mediaRecorder.onstop = () => {
+                        try {
+                            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.style.display = 'none';
+                            a.href = url;
+                            a.download = `Rekaman_SAT_${student.class}_${student.name.replace(/\s+/g, '_')}.webm`;
+                            document.body.appendChild(a);
+                            a.click();
+                            setTimeout(() => {
+                                document.body.removeChild(a);
+                                window.URL.revokeObjectURL(url);
+                            }, 100);
+                        } catch(e) {}
+                    };
+                } catch(e) {
+                    console.warn("Gagal menghentikan atau menyimpan rekaman:", e);
+                }
+            }
+
+            // Hitung Perolehan Nilai
+            let correct = 0;
+            let wrong = 0;
+            answers.forEach((ans, idx) => {
+                if (ans === questionsDB[idx].answer) correct++;
+                else if (ans !== null) wrong++;
+            });
+            let finalScore = correct * POINTS_PER_QUESTION;
+
+            // Paketkan Data untuk Spreadsheet
+            const dataPayload = {
+                nama: student.name,
+                kelas: student.class,
+                benar: correct,
+                salah: wrong,
+                kosong: TOTAL_QUESTIONS - correct - wrong,
+                nilai: finalScore,
+                pelanggaran: warningLogs.length > 0 ? warningLogs.join(" | ") : "Aman (0 Pelanggaran)"
+            };
+
+            // Kirim ke Google Sheets (Non-blocking)
+            if (SCRIPT_URL) {
+                try {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dataPayload)
+                    });
+                } catch(e) { console.error("Gagal mengirimkan data:", e); }
+            }
+
+            // Tampilkan Halaman Hasil Evaluasi
+            showResult(dataPayload);
+            
+            try {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                }
+            } catch(e) {}
+        }
+
+        function showResult(data) {
+            document.getElementById('examView').classList.add('hidden');
+            document.getElementById('examView').classList.remove('flex');
+            
+            const resView = document.getElementById('resultView');
+            resView.classList.remove('hidden');
+            resView.classList.add('flex');
+            
+            document.getElementById('resName').textContent = data.nama;
+            document.getElementById('resClass').textContent = data.kelas;
+            document.getElementById('resScore').textContent = data.nilai;
+            document.getElementById('resCorrect').textContent = data.benar;
+            document.getElementById('resWrong').textContent = data.salah + data.kosong;
+
+            const warnBox = document.getElementById('resWarnings');
+            if (warningLogs.length > 0) {
+                warnBox.innerHTML = '<ul class="list-disc ml-4">' + warningLogs.map(l => `<li>${l}</li>`).join('') + '</ul>';
+            } else {
+                warnBox.innerHTML = '<span class="text-green-600 font-semibold"><i class="fas fa-check-circle"></i> Tidak ada kecurangan terdeteksi. Luar biasa!</span>';
+            }
+
+            // Render Panel Review Pembahasan
+            const reviewContainer = document.getElementById('reviewContainer');
+            reviewContainer.innerHTML = '';
+            
+            questionsDB.forEach((q, idx) => {
+                const studentAnsIdx = answers[idx];
+                const isCorrect = studentAnsIdx === q.answer;
+                const isUnanswered = studentAnsIdx === null;
+                
+                const card = document.createElement('div');
+                card.className = `p-4 border rounded-lg ${isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`;
+                
+                let ansText = isUnanswered ? '<span class="text-gray-500 italic">Tidak dijawab</span>' : q.options[studentAnsIdx];
+                let correctMark = isCorrect ? '<i class="fas fa-check-circle text-green-500"></i>' : '<i class="fas fa-times-circle text-red-500"></i>';
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-gray-800">Soal ${idx + 1}</h4>
+                        ${correctMark}
+                    </div>
+                    <p class="text-gray-800 mb-3">${q.q}</p>
+                    <div class="text-sm space-y-1 mb-3">
+                        <div><span class="font-semibold text-gray-600">Jawaban Anda:</span> ${ansText}</div>
+                        ${!isCorrect ? `<div><span class="font-semibold text-gray-600">Jawaban Benar:</span> <span class="text-green-700 font-medium">${q.options[q.answer]}</span></div>` : ''}
+                    </div>
+                    <div class="text-sm bg-white p-3 rounded border border-gray-200">
+                        <span class="font-bold text-blue-700"><i class="fas fa-lightbulb mr-1"></i> Penjelasan:</span> 
+                        <span class="text-gray-700">${q.explanation}</span>
+                    </div>
+                `;
+                reviewContainer.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
